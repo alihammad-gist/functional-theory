@@ -1,6 +1,8 @@
 package chap03_3
 
 import Example._
+import chap03.FunctionType
+import _root_.scala.Unit
 
 object Exercise {
 
@@ -106,5 +108,36 @@ object Exercise {
 
   def flatMapET[E, A, B]: Reader[E, A] => (A => Reader[E, B]) => Reader[E, B] =
     ea => aeb => e => aeb(ea(e))(e)
+
+  object hole
+  type Density[Z, T] = (T => Z) => T
+
+  //    (a -> b) -> ((a -> z) -> a) -> ((b -> z) -> b)
+  def map[Z, A, B]: (A => B) => Density[Z, A] => Density[Z, B] =
+    ab => aza => bz => ab(aza((x) => bz(ab(x))))
+
+  // ( (a -> z) -> a) => (a -> (b -> z) -> b) => (b -> z) -> b
+  def flatMapDen[Z, A, B]
+      : Density[Z, A] => (A => Density[Z, B]) => Density[Z, B] =
+    aza => abzb => bz => abzb(aza((a) => bz(abzb(a)(bz))))(bz)
+
+  type Cont[R, T] = (T => R) => R
+
+  def mapCnt[R, T, U]: (T => U) => Cont[R, T] => Cont[R, U] =
+    tu => trr => ur => trr(tu.andThen(ur))
+
+  // ((t -> r) -> r) -> (t -> (u -> r) -> r) -> (u -> r) -> r
+  def flatMapCnt[R, T, U]: Cont[R, T] => (T => Cont[R, U]) => Cont[R, U] =
+    trr => turr => ur => ??? // cannot product T for `turr`
+
+  sealed trait Tr3[+A]
+  final case object TrUnit extends Tr3[Nothing]
+  final case class Pairs[A](a: A, b: A, c: A, t: Tr3[A]) extends Tr3[A];
+
+  def mapTr3[A, B]: (A => B) => Tr3[A] => Tr3[B] =
+    fn => {
+      case TrUnit            => TrUnit
+      case Pairs(a, b, c, t) => Pairs(fn(a), fn(b), fn(c), mapTr3(fn)(t))
+    }
 
 }
